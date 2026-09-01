@@ -1,0 +1,34 @@
+---
+- name: Install Docker on Debian based systems
+  become: true
+  ansible.builtin.apt:
+    name:
+      - docker.io
+      - python3-docker
+    state: present
+    update_cache: true
+  when: ansible_os_family == "Debian"
+
+- name: Install Docker on RedHat based systems
+  become: true
+  ansible.builtin.dnf:
+    name:
+      - docker
+      - python3-pip
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Enable Docker service
+  become: true
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Add required users to Docker group
+  become: true
+  ansible.builtin.user:
+    name: "{{ item }}"
+    groups: docker
+    append: true
+  loop: "{{ docker_users }}"

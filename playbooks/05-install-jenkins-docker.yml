@@ -1,0 +1,43 @@
+---
+- name: Run Jenkins as Docker container
+  hosts: all
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: docker_engine
+
+  tasks:
+    - name: Find Docker CLI path
+      ansible.builtin.command:
+        cmd: command -v docker
+      register: docker_cli
+      changed_when: false
+
+    - name: Create Jenkins home volume
+      community.docker.docker_volume:
+        name: jenkins_home
+        state: present
+
+    - name: Start Jenkins container
+      community.docker.docker_container:
+        name: jenkins
+        image: jenkins/jenkins:lts
+        pull: missing
+        state: started
+        restart_policy: unless-stopped
+        published_ports:
+          - "8080:8080"
+          - "50000:50000"
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock
+          - "{{ docker_cli.stdout }}:/usr/bin/docker:ro"
+          - jenkins_home:/var/jenkins_home
+
+    - name: Wait for Jenkins UI
+      ansible.builtin.wait_for:
+        host: "{{ ansible_host }}"
+        port: 8080
+        timeout: 180
+      delegate_to: localhost
+      become: false
