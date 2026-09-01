@@ -1,0 +1,4 @@
+---
+- name: Install Ubuntu Jenkins role
+  ansible.builtin.include_role:
+    name: jenkins_ubuntu

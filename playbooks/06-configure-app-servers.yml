@@ -1,0 +1,52 @@
+---
+- name: Configure MySQL database server
+  hosts: role_database
+  become: true
+
+  vars_files:
+    - ../generated/exercise-06.yml
+    - ../generated/exercise-06-secrets.yml
+
+  vars:
+    mysql_root_password: "{{ db_root_password }}"
+
+    mysql_databases:
+      - name: "{{ db_name }}"
+        encoding: utf8mb4
+        collation: utf8mb4_unicode_ci
+
+    mysql_users:
+      - name: "{{ db_user }}"
+        host: "%"
+        password: "{{ db_password }}"
+        priv: "{{ db_name }}.*:ALL"
+        state: present
+
+    mysql_bind_address: "0.0.0.0"
+
+  roles:
+    - role: geerlingguy.mysql
+
+- name: Deploy Java application
+  hosts: role_web
+  become: true
+
+  vars_files:
+    - ../generated/exercise-06.yml
+    - ../generated/exercise-06-secrets.yml
+
+  pre_tasks:
+    - name: Resolve database private address
+      ansible.builtin.set_fact:
+        db_server: "{{ hostvars[groups['role_database'][0]].ansible_host }}"
+
+  roles:
+    - role: java_app
+      vars:
+        java_artifact_source: "/opt/ansible-capstone/build/libs/application.jar"
+
+  post_tasks:
+    - name: Verify Java application is listening
+      ansible.builtin.wait_for:
+        port: 8080
+        timeout: 120

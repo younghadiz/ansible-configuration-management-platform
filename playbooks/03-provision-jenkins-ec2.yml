@@ -1,0 +1,55 @@
+---
+- name: Provision Jenkins EC2 server
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Validate required AWS variables
+      ansible.builtin.assert:
+        that:
+          - aws_region is defined
+          - vpc_id is defined
+          - subnet_id is defined
+          - key_name is defined
+          - ami_id is defined
+          - admin_cidr is defined
+
+    - name: Create Jenkins security group
+      amazon.aws.ec2_security_group:
+        name: ansible-capstone-jenkins-sg
+        description: Jenkins access for Ansible capstone
+        region: "{{ aws_region }}"
+        vpc_id: "{{ vpc_id }}"
+        rules:
+          - proto: tcp
+            ports:
+              - 22
+            cidr_ip: "{{ admin_cidr }}"
+            rule_desc: SSH administration
+
+          - proto: tcp
+            ports:
+              - 8080
+            cidr_ip: "{{ admin_cidr }}"
+            rule_desc: Jenkins UI
+      register: jenkins_sg
+
+    - name: Launch Jenkins instance
+      amazon.aws.ec2_instance:
+        name: ansible-capstone-jenkins
+        region: "{{ aws_region }}"
+        key_name: "{{ key_name }}"
+        vpc_subnet_id: "{{ subnet_id }}"
+        image_id: "{{ ami_id }}"
+        instance_type: t3.medium
+        security_group: "{{ jenkins_sg.group_id }}"
+        network:
+          assign_public_ip: true
+        tags:
+          Project: ansible-capstone
+          Role: jenkins
+          ManagedBy: ansible
+        exact_count: 1
+        wait: true
+        state: running

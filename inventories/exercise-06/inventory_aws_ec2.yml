@@ -1,0 +1,20 @@
+---
+plugin: amazon.aws.aws_ec2
+
+regions:
+  - ca-central-1
+
+filters:
+  tag:Project: ansible-capstone
+  instance-state-name: running
+
+hostnames:
+  - private-ip-address
+  - public-ip-address
+
+keyed_groups:
+  - prefix: role
+    key: tags.Role
+
+compose:
+  ansible_user: "'ubuntu'"
