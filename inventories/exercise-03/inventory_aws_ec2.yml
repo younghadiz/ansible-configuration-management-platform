@@ -1,0 +1,21 @@
+---
+plugin: amazon.aws.aws_ec2
+
+regions:
+  - "{{ lookup('env', 'AWS_REGION') | default('ca-central-1', true) }}"
+
+filters:
+  tag:Project: ansible-capstone
+  tag:Role: jenkins
+  instance-state-name: running
+
+hostnames:
+  - public-dns-name
+  - ip-address
+
+compose:
+  ansible_user: "'ec2-user'"
+
+keyed_groups:
+  - prefix: tag
+    key: tags

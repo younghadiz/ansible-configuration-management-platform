@@ -1,0 +1,54 @@
+---
+- name: Install Jenkins prerequisites
+  become: true
+  ansible.builtin.dnf:
+    name:
+      - wget
+      - git
+      - fontconfig
+      - java-21-openjdk
+      - nodejs
+      - npm
+      - docker
+    state: present
+    update_cache: true
+
+- name: Add Jenkins LTS repository
+  become: true
+  ansible.builtin.get_url:
+    url: https://pkg.jenkins.io/rpm-stable/jenkins.repo
+    dest: /etc/yum.repos.d/jenkins.repo
+    mode: "0644"
+
+- name: Import Jenkins repository signing key
+  become: true
+  ansible.builtin.rpm_key:
+    key: https://pkg.jenkins.io/rpm-stable/jenkins.io-2023.key
+    state: present
+
+- name: Install Jenkins
+  become: true
+  ansible.builtin.dnf:
+    name: jenkins
+    state: present
+
+- name: Add Jenkins to Docker group
+  become: true
+  ansible.builtin.user:
+    name: jenkins
+    groups: docker
+    append: true
+
+- name: Enable Docker
+  become: true
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Enable Jenkins
+  become: true
+  ansible.builtin.systemd:
+    name: jenkins
+    enabled: true
+    state: started
