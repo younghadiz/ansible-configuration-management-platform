@@ -1,0 +1,119 @@
+---
+- name: Build Java application locally
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    gradle_wrapper: "./gradlew"
+
+  tasks:
+    - name: Validate required variables
+      ansible.builtin.assert:
+        that:
+          - linux_user is defined
+          - project_dir is defined
+          - jar_name is defined
+        fail_msg: >-
+          Required variables:
+          linux_user, project_dir and jar_name.
+
+    - name: Build Java application with Gradle
+      ansible.builtin.command:
+        cmd: "{{ gradle_wrapper }} clean build"
+        chdir: "{{ project_dir }}"
+      changed_when: true
+
+    - name: Verify built artifact exists
+      ansible.builtin.stat:
+        path: "{{ project_dir }}/build/libs/{{ jar_name }}"
+      register: built_artifact
+
+    - name: Fail if Java artifact was not produced
+      ansible.builtin.assert:
+        that:
+          - built_artifact.stat.exists
+        fail_msg: >-
+          Expected artifact was not found:
+          {{ project_dir }}/build/libs/{{ jar_name }}
+
+- name: Deploy Java artifact to Ubuntu server
+  hosts: java_servers
+  become: true
+
+  vars:
+    app_dir: "/opt/java-app"
+    remote_jar: "{{ app_dir }}/application.jar"
+    app_log: "{{ app_dir }}/application.log"
+
+  tasks:
+    - name: Install runtime dependencies
+      ansible.builtin.apt:
+        name:
+          - acl
+          - openjdk-17-jre-headless
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Ensure application Linux user exists
+      ansible.builtin.user:
+        name: "{{ linux_user }}"
+        shell: /bin/bash
+        create_home: true
+        state: present
+
+    - name: Ensure application directory exists
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ linux_user }}"
+        group: "{{ linux_user }}"
+        mode: "0755"
+
+    - name: Find currently running application
+      ansible.builtin.shell: |
+        pgrep -f "java -jar {{ remote_jar }}" || true
+      register: running_java_process
+      changed_when: false
+
+    - name: Stop currently running application
+      ansible.builtin.shell: |
+        pkill -f "java -jar {{ remote_jar }}"
+      when: running_java_process.stdout | length > 0
+      changed_when: true
+
+    - name: Wait until previous Java process stops
+      ansible.builtin.wait_for:
+        timeout: 5
+      when: running_java_process.stdout | length > 0
+
+    - name: Remove previously deployed JAR
+      ansible.builtin.file:
+        path: "{{ remote_jar }}"
+        state: absent
+
+    - name: Copy newly built Java artifact
+      ansible.builtin.copy:
+        src: "{{ project_dir }}/build/libs/{{ jar_name }}"
+        dest: "{{ remote_jar }}"
+        owner: "{{ linux_user }}"
+        group: "{{ linux_user }}"
+        mode: "0644"
+
+    - name: Start Java application
+      become_user: "{{ linux_user }}"
+      ansible.builtin.command:
+        cmd: "java -jar {{ remote_jar }}"
+      async: 1000
+      poll: 0
+      changed_when: true
+
+    - name: Wait for Java application port
+      ansible.builtin.wait_for:
+        host: "{{ ansible_host }}"
+        port: 8080
+        delay: 5
+        timeout: 120
+      delegate_to: localhost
+      become: false
