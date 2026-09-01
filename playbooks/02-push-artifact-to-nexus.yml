@@ -1,0 +1,53 @@
+---
+- name: Upload tested Java artifact to Nexus
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    group_id: "com.example"
+
+  tasks:
+    - name: Validate Nexus deployment variables
+      ansible.builtin.assert:
+        that:
+          - nexus_url is defined
+          - nexus_user is defined
+          - nexus_password is defined
+          - repository_name is defined
+          - artifact_name is defined
+          - artifact_version is defined
+          - jar_file_path is defined
+
+    - name: Validate artifact exists
+      ansible.builtin.stat:
+        path: "{{ jar_file_path }}"
+      register: jar_artifact
+
+    - name: Fail when artifact does not exist
+      ansible.builtin.assert:
+        that:
+          - jar_artifact.stat.exists
+        fail_msg: "Artifact not found at {{ jar_file_path }}"
+
+    - name: Build Nexus Maven repository path
+      ansible.builtin.set_fact:
+        nexus_artifact_url: >-
+          {{ nexus_url }}/repository/{{ repository_name }}/
+          {{ group_id | replace('.', '/') }}/
+          {{ artifact_name }}/{{ artifact_version }}/
+          {{ artifact_name }}-{{ artifact_version }}.jar
+
+    - name: Upload Java artifact to Nexus
+      ansible.builtin.uri:
+        url: "{{ nexus_artifact_url | replace(' ', '') }}"
+        method: PUT
+        user: "{{ nexus_user }}"
+        password: "{{ nexus_password }}"
+        force_basic_auth: true
+        src: "{{ jar_file_path }}"
+        status_code:
+          - 200
+          - 201
+          - 204
+      no_log: true
