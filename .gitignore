@@ -1,0 +1,66 @@
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Java / Gradle
+.gradle/
+build/
+*.jar
+
+# Ansible temporary/retry
+*.retry
+.ansible/
+
+# SSH / cloud keys
+*.pem
+*.key
+id_rsa
+id_ed25519
+
+# AWS credentials
+.aws/
+credentials
+
+# Secrets
+.env
+.env.*
+secrets.yml
+vault.yml
+vault-password*
+*.vault
+
+# Kubernetes
+kubeconfig
+kubeconfig.*
+.kube/
+
+# Terraform if temporary infrastructure is added
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+# Generated runtime values
+generated/*
+!generated/.gitkeep
+
+# Local inventories containing real addresses
+inventories/**/hosts.ini
+inventories/**/amazon-linux.ini
+inventories/**/ubuntu.ini
+
+# Logs
+*.log
+
+# Third-party Ansible Galaxy roles
+roles/geerlingguy.mysql/

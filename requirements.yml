@@ -1,0 +1,16 @@
+---
+collections:
+  - name: amazon.aws
+
+  - name: community.aws
+
+  - name: community.docker
+
+  - name: community.general
+
+  - name: community.mysql
+
+  - name: kubernetes.core
+
+roles:
+  - name: geerlingguy.mysql
