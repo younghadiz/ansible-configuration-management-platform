@@ -1,0 +1,51 @@
+---
+- name: Replace single MySQL instance with Helm-managed MySQL replication
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    namespace: java-mysql
+
+  tasks:
+    - name: Validate MySQL passwords
+      ansible.builtin.assert:
+        that:
+          - mysql_root_password is defined
+          - mysql_app_password is defined
+
+    - name: Remove exercise 7 MySQL deployment
+      kubernetes.core.k8s:
+        state: absent
+        api_version: apps/v1
+        kind: Deployment
+        name: mysql
+        namespace: "{{ namespace }}"
+
+    - name: Remove old MySQL service
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Service
+        name: mysql
+        namespace: "{{ namespace }}"
+
+    - name: Deploy replicated MySQL Helm chart
+      kubernetes.core.helm:
+        name: mysql
+        chart_ref: oci://registry-1.docker.io/bitnamicharts/mysql
+        release_namespace: "{{ namespace }}"
+        create_namespace: false
+        state: present
+
+        values_files:
+          - "{{ playbook_dir }}/../kubernetes/exercise-08/mysql-values.yml"
+
+        set_values:
+          - value: "auth.rootPassword={{ mysql_root_password }}"
+            value_type: string
+
+          - value: "auth.password={{ mysql_app_password }}"
+            value_type: string
+
+      no_log: true
