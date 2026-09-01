@@ -1,0 +1,59 @@
+---
+- name: Configure dedicated Ansible control plane
+  hosts: role_ansible_control
+  become: true
+
+  vars:
+    project_dir: /opt/ansible-capstone
+
+  tasks:
+    - name: Install Ansible control dependencies
+      ansible.builtin.apt:
+        name:
+          - python3
+          - python3-pip
+          - python3-venv
+          - git
+          - rsync
+          - acl
+        state: present
+        update_cache: true
+
+    - name: Install Ansible and AWS Python SDK
+      ansible.builtin.pip:
+        name:
+          - ansible
+          - boto3
+          - botocore
+        executable: pip3
+
+    - name: Ensure project directory exists
+      ansible.builtin.file:
+        path: "{{ project_dir }}"
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: "0755"
+
+    - name: Copy Ansible project to control node
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../"
+        dest: "{{ project_dir }}/playbooks/"
+        owner: ubuntu
+        group: ubuntu
+        mode: preserve
+
+    - name: Create Ansible config directory
+      ansible.builtin.file:
+        path: /home/ubuntu/.ansible
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: "0700"
+
+    - name: Install project collections and roles
+      become_user: ubuntu
+      ansible.builtin.command:
+        cmd: ansible-galaxy install -r requirements.yml
+        chdir: "{{ project_dir }}"
+      changed_when: true

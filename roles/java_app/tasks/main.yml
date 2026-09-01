@@ -1,0 +1,52 @@
+---
+- name: Install Java runtime
+  become: true
+  ansible.builtin.apt:
+    name:
+      - openjdk-17-jre-headless
+      - acl
+    state: present
+    update_cache: true
+
+- name: Create Java application user
+  become: true
+  ansible.builtin.user:
+    name: "{{ java_app_user }}"
+    create_home: true
+    shell: /bin/bash
+
+- name: Create Java application directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ java_app_dir }}"
+    state: directory
+    owner: "{{ java_app_user }}"
+    group: "{{ java_app_user }}"
+    mode: "0755"
+
+- name: Copy Java JAR
+  become: true
+  ansible.builtin.copy:
+    src: "{{ java_artifact_source }}"
+    dest: "{{ java_app_dir }}/{{ java_app_jar }}"
+    owner: "{{ java_app_user }}"
+    group: "{{ java_app_user }}"
+    mode: "0644"
+
+- name: Stop previous application
+  become: true
+  ansible.builtin.shell: |
+    pkill -f "java -jar {{ java_app_dir }}/{{ java_app_jar }}" || true
+  changed_when: false
+
+- name: Start Java application
+  become: true
+  become_user: "{{ java_app_user }}"
+  ansible.builtin.shell: |
+    DB_USER="{{ db_user }}" \
+    DB_PWD="{{ db_password }}" \
+    DB_SERVER="{{ db_server }}" \
+    DB_NAME="{{ db_name }}" \
+    nohup java -jar "{{ java_app_dir }}/{{ java_app_jar }}" \
+    > "{{ java_app_dir }}/application.log" 2>&1 &
+  no_log: true
