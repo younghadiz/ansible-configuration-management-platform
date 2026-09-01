@@ -1,0 +1,15 @@
+---
+- name: Install Jenkins build server on Amazon Linux
+  hosts: tag_Role_jenkins
+  gather_facts: true
+
+  roles:
+    - role: jenkins_amazon_linux
+
+  post_tasks:
+    - name: Wait for Jenkins port
+      ansible.builtin.wait_for:
+        host: "{{ ansible_host }}"
+        port: 8080
+        timeout: 180
+      delegate_to: localhost
