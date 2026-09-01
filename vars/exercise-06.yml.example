@@ -1,0 +1,21 @@
+---
+aws_region: ca-central-1
+availability_zone: ca-central-1a
+
+vpc_cidr: 10.30.0.0/16
+public_subnet_cidr: 10.30.10.0/24
+private_subnet_cidr: 10.30.20.0/24
+
+control_key_name: ansible-control-server-key
+managed_key_name: ansible-managed-server-key
+
+ubuntu_ami_id: ami-REPLACE
+
+control_instance_type: t3.small
+web_instance_type: t3.small
+db_instance_type: t3.small
+
+admin_cidr: YOUR_PUBLIC_IP/32
+
+db_name: appdb
+db_user: appuser

@@ -1,0 +1,5 @@
+---
+java_app_user: javaapp
+java_app_dir: /opt/java-app
+java_app_jar: application.jar
+java_app_port: 8080

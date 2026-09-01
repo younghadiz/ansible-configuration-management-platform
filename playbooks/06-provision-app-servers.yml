@@ -1,0 +1,82 @@
+---
+- name: Provision Java web and private MySQL servers
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars_files:
+    - ../generated/exercise-06.yml
+    - ../generated/exercise-06-network.yml
+
+  tasks:
+    - name: Create web security group
+      amazon.aws.ec2_security_group:
+        name: ansible-capstone-web-sg
+        description: Java web application
+        region: "{{ aws_region }}"
+        vpc_id: "{{ vpc_id }}"
+        rules:
+          - proto: tcp
+            ports:
+              - 22
+            cidr_ip: "{{ vpc_cidr }}"
+
+          - proto: tcp
+            ports:
+              - 8080
+            cidr_ip: 0.0.0.0/0
+      register: web_sg
+
+    - name: Create database security group
+      amazon.aws.ec2_security_group:
+        name: ansible-capstone-db-sg
+        description: MySQL private access
+        region: "{{ aws_region }}"
+        vpc_id: "{{ vpc_id }}"
+        rules:
+          - proto: tcp
+            ports:
+              - 22
+            cidr_ip: "{{ vpc_cidr }}"
+
+          - proto: tcp
+            ports:
+              - 3306
+            group_id: "{{ web_sg.group_id }}"
+      register: db_sg
+
+    - name: Create web application server
+      amazon.aws.ec2_instance:
+        name: ansible-capstone-web
+        region: "{{ aws_region }}"
+        key_name: "{{ managed_key_name }}"
+        image_id: "{{ ubuntu_ami_id }}"
+        instance_type: "{{ web_instance_type }}"
+        vpc_subnet_id: "{{ public_subnet_id }}"
+        security_group: "{{ web_sg.group_id }}"
+        network:
+          assign_public_ip: true
+        tags:
+          Project: ansible-capstone
+          Role: web
+          ManagedBy: ansible
+        exact_count: 1
+        wait: true
+
+    - name: Create private database server
+      amazon.aws.ec2_instance:
+        name: ansible-capstone-db
+        region: "{{ aws_region }}"
+        key_name: "{{ managed_key_name }}"
+        image_id: "{{ ubuntu_ami_id }}"
+        instance_type: "{{ db_instance_type }}"
+        vpc_subnet_id: "{{ private_subnet_id }}"
+        security_group: "{{ db_sg.group_id }}"
+        network:
+          assign_public_ip: false
+        tags:
+          Project: ansible-capstone
+          Role: database
+          ManagedBy: ansible
+        exact_count: 1
+        wait: true
