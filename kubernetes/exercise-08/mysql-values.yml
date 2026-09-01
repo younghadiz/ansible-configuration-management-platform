@@ -1,0 +1,20 @@
+architecture: replication
+
+auth:
+  database: appdb
+  username: appuser
+
+primary:
+  persistence:
+    enabled: true
+    size: 8Gi
+
+secondary:
+  replicaCount: 2
+
+  persistence:
+    enabled: true
+    size: 8Gi
+
+metrics:
+  enabled: false
