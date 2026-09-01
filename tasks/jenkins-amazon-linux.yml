@@ -1,0 +1,4 @@
+---
+- name: Install Amazon Linux Jenkins role
+  ansible.builtin.include_role:
+    name: jenkins_amazon_linux

@@ -1,0 +1,73 @@
+---
+- name: Install prerequisites
+  become: true
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - wget
+      - git
+      - fontconfig
+      - openjdk-21-jre
+      - nodejs
+      - npm
+      - docker.io
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Ensure apt keyrings directory exists
+  become: true
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Download Jenkins signing key
+  become: true
+  ansible.builtin.get_url:
+    url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+    dest: /etc/apt/keyrings/jenkins-keyring.asc
+    mode: "0644"
+
+- name: Configure Jenkins repository
+  become: true
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb
+      [signed-by=/etc/apt/keyrings/jenkins-keyring.asc]
+      https://pkg.jenkins.io/debian-stable binary/
+    filename: jenkins
+    state: present
+
+- name: Update apt repository
+  become: true
+  ansible.builtin.apt:
+    update_cache: true
+
+- name: Install Jenkins
+  become: true
+  ansible.builtin.apt:
+    name: jenkins
+    state: present
+
+- name: Add Jenkins user to Docker group
+  become: true
+  ansible.builtin.user:
+    name: jenkins
+    groups: docker
+    append: true
+
+- name: Enable Docker
+  become: true
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Enable Jenkins
+  become: true
+  ansible.builtin.systemd:
+    name: jenkins
+    enabled: true
+    state: started

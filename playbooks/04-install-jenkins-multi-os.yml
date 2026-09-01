@@ -1,0 +1,31 @@
+---
+- name: Install Jenkins according to Linux distribution
+  hosts: all
+  gather_facts: true
+
+  tasks:
+    - name: Show detected Linux distribution
+      ansible.builtin.debug:
+        msg: >-
+          Distribution={{ ansible_distribution }}
+          Family={{ ansible_os_family }}
+
+    - name: Install Jenkins on Amazon Linux
+      ansible.builtin.include_tasks:
+        file: ../tasks/jenkins-amazon-linux.yml
+      when:
+        - ansible_distribution in ["Amazon", "Amazon Linux"]
+
+    - name: Install Jenkins on Ubuntu
+      ansible.builtin.include_tasks:
+        file: ../tasks/jenkins-ubuntu.yml
+      when:
+        - ansible_distribution == "Ubuntu"
+
+    - name: Reject unsupported operating systems
+      ansible.builtin.fail:
+        msg: >-
+          Unsupported distribution:
+          {{ ansible_distribution }}
+      when:
+        - ansible_distribution not in ["Amazon", "Amazon Linux", "Ubuntu"]
